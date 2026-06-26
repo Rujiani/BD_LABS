@@ -1,9 +1,3 @@
-#!/usr/bin/env bash
-# Матрица замеров: каждый тип индекса отдельно × Q4 + Q3.
-#
-#   ./run_benchmark_matrix.sh          # на текущей bd_lab7 без индексов
-#   ./run_benchmark_matrix.sh --rebuild
-#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
