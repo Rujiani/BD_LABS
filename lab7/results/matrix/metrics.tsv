@@ -1,0 +1,6 @@
+scenario	q4_planning_ms	q4_execution_ms	q4_buffers_shared	q3_planning_ms	q3_execution_ms	q3_buffers_shared
+none	0.602	156.215	30902	1.226	65.076	11022
+covering	0.507	82.960	354	1.454	57.034	25815
+partial	0.603	144.532	30513	0.822	65.255	11037
+composite	0.747	80.523	351	1.221	56.968	11023
+all	0.714	85.180	366	0.717	48.857	25823

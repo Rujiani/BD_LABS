@@ -1,0 +1,67 @@
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=121518.72..122742.88 rows=489664 width=52) (actual time=128.829..130.461 rows=45304 loops=1)
+   Sort Key: u.login, ((((d.day_offset * 8) + h.slot_idx) + 1))
+   Sort Method: quicksort  Memory: 4011kB
+   Buffers: shared hit=3784
+   CTE active
+     ->  Unique  (cost=11863.48..12982.06 rows=8744 width=12) (actual time=79.236..81.759 rows=9654 loops=1)
+           Buffers: shared hit=3764
+           ->  Gather Merge  (cost=11863.48..12916.48 rows=8744 width=12) (actual time=79.235..80.954 rows=9660 loops=1)
+                 Workers Planned: 2
+                 Workers Launched: 2
+                 Buffers: shared hit=3764
+                 ->  Unique  (cost=10863.46..10907.18 rows=4372 width=12) (actual time=67.916..68.445 rows=3220 loops=3)
+                       Buffers: shared hit=3764
+                       ->  Sort  (cost=10863.46..10874.39 rows=4372 width=12) (actual time=67.915..68.076 rows=3223 loops=3)
+                             Sort Key: v.user_id, (((v.viewed_at)::date - ((date_trunc('week'::text, (CURRENT_DATE)::timestamp with time zone) - '7 days'::interval))::date)), (((EXTRACT(hour FROM v.viewed_at))::integer / 3))
+                             Sort Method: quicksort  Memory: 231kB
+                             Buffers: shared hit=3764
+                             Worker 0:  Sort Method: quicksort  Memory: 220kB
+                             Worker 1:  Sort Method: quicksort  Memory: 217kB
+                             ->  Parallel Seq Scan on ws_view_history v  (cost=0.00..10599.08 rows=4372 width=12) (actual time=8.704..67.099 rows=3223 loops=3)
+                                   Filter: ((viewed_at < date_trunc('week'::text, (CURRENT_DATE)::timestamp with time zone)) AND (viewed_at >= (date_trunc('week'::text, (CURRENT_DATE)::timestamp with time zone) - '7 days'::interval)))
+                                   Rows Removed by Filter: 164107
+                                   Buffers: shared hit=3692
+   ->  Merge Left Join  (cost=53598.00..62259.91 rows=489664 width=52) (actual time=111.778..119.527 rows=45304 loops=1)
+         Merge Cond: ((a_1.user_id = a.user_id) AND (d.day_offset = a.day_offset) AND (h.slot_idx = a.slot_idx))
+         Buffers: shared hit=1302
+         ->  Sort  (cost=52850.65..54074.81 rows=489664 width=28) (actual time=110.206..111.720 rows=45304 loops=1)
+               Sort Key: a_1.user_id, d.day_offset, h.slot_idx
+               Sort Method: quicksort  Memory: 4011kB
+               Buffers: shared hit=1302
+               ->  Nested Loop  (cost=276.88..6573.89 rows=489664 width=28) (actual time=85.220..89.156 rows=45304 loops=1)
+                     Buffers: shared hit=1302
+                     ->  HashAggregate  (cost=276.88..364.32 rows=8744 width=20) (actual time=85.186..85.400 rows=809 loops=1)
+                           Group Key: a_1.user_id, u.login
+                           Batches: 1  Memory Usage: 465kB
+                           Buffers: shared hit=1302
+                           ->  Hash Join  (cost=35.20..233.16 rows=8744 width=20) (actual time=79.509..83.859 rows=9654 loops=1)
+                                 Hash Cond: (a_1.user_id = u.user_id)
+                                 Buffers: shared hit=1302
+                                 ->  CTE Scan on active a_1  (cost=0.00..174.88 rows=8744 width=4) (actual time=79.238..82.557 rows=9654 loops=1)
+                                       Buffers: shared hit=1285
+                                 ->  Hash  (cost=25.09..25.09 rows=809 width=20) (actual time=0.249..0.250 rows=809 loops=1)
+                                       Buckets: 1024  Batches: 1  Memory Usage: 53kB
+                                       Buffers: shared hit=17
+                                       ->  Seq Scan on ws_user u  (cost=0.00..25.09 rows=809 width=20) (actual time=0.022..0.109 rows=809 loops=1)
+                                             Buffers: shared hit=17
+                     ->  Materialize  (cost=0.01..1.47 rows=56 width=8) (actual time=0.000..0.001 rows=56 loops=809)
+                           ->  Nested Loop  (cost=0.01..1.19 rows=56 width=8) (actual time=0.023..0.032 rows=56 loops=1)
+                                 ->  Function Scan on generate_series d  (cost=0.00..0.07 rows=7 width=4) (actual time=0.012..0.012 rows=7 loops=1)
+                                 ->  Function Scan on generate_series h  (cost=0.00..0.08 rows=8 width=4) (actual time=0.001..0.001 rows=8 loops=7)
+         ->  Sort  (cost=747.35..769.21 rows=8744 width=12) (actual time=1.513..1.763 rows=9654 loops=1)
+               Sort Key: a.user_id, a.day_offset, a.slot_idx
+               Sort Method: quicksort  Memory: 762kB
+               ->  CTE Scan on active a  (cost=0.00..174.88 rows=8744 width=12) (actual time=0.002..0.530 rows=9654 loops=1)
+ Settings: work_mem = '64MB'
+ Planning:
+   Buffers: shared hit=152
+ Planning Time: 0.603 ms
+ JIT:
+   Functions: 55
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 2.446 ms, Inlining 0.000 ms, Optimization 1.181 ms, Emission 24.239 ms, Total 27.866 ms
+ Execution Time: 144.532 ms
+(63 rows)
+

@@ -1,0 +1,66 @@
+                                                                                   QUERY PLAN                                                                                    
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=12046.23..12046.40 rows=67 width=131) (actual time=64.570..64.593 rows=884 loops=1)
+   Sort Key: (CASE WHEN (los.last_login_at IS NULL) THEN (CURRENT_DATE - (los.safe_ip_added_at)::date) ELSE (CURRENT_DATE - (los.last_login_at)::date) END) DESC, los.ip_address
+   Sort Method: quicksort  Memory: 189kB
+   Buffers: shared hit=1279
+   CTE active_safe
+     ->  Seq Scan on ws_safe_ip  (cost=0.00..15.85 rows=884 width=23) (actual time=0.008..0.090 rows=884 loops=1)
+           Filter: is_active
+           Rows Removed by Filter: 1
+           Buffers: shared hit=7
+   ->  Hash Right Join  (cost=11660.36..12028.35 rows=67 width=131) (actual time=58.911..64.254 rows=884 loops=1)
+         Hash Cond: (s.safe_ip_id = los.safe_ip_id)
+         Buffers: shared hit=1273
+         ->  Unique  (cost=9043.57..9406.80 rows=200 width=19) (actual time=42.429..47.426 rows=878 loops=1)
+               Buffers: shared hit=626
+               ->  Sort  (cost=9043.57..9225.19 rows=72646 width=19) (actual time=42.427..44.903 rows=72887 loops=1)
+                     Sort Key: s.safe_ip_id, lh.logged_at DESC
+                     Sort Method: quicksort  Memory: 6489kB
+                     Buffers: shared hit=626
+                     ->  Hash Join  (cost=2115.81..3177.92 rows=72646 width=19) (actual time=10.190..17.848 rows=72887 loops=1)
+                           Hash Cond: (s.user_id = lh.user_id)
+                           Join Filter: (lh.ip_address <> s.ip_address)
+                           Rows Removed by Join Filter: 156
+                           Buffers: shared hit=623
+                           ->  CTE Scan on active_safe s  (cost=0.00..17.68 rows=884 width=40) (actual time=0.000..0.077 rows=884 loops=1)
+                           ->  Hash  (cost=1286.47..1286.47 rows=66347 width=19) (actual time=9.877..9.878 rows=66347 loops=1)
+                                 Buckets: 131072  Batches: 1  Memory Usage: 4394kB
+                                 Buffers: shared hit=623
+                                 ->  Seq Scan on ws_login_history lh  (cost=0.00..1286.47 rows=66347 width=19) (actual time=0.003..4.248 rows=66347 loops=1)
+                                       Buffers: shared hit=623
+         ->  Hash  (cost=2615.95..2615.95 rows=67 width=171) (actual time=16.464..16.467 rows=884 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 158kB
+               Buffers: shared hit=647
+               ->  Hash Join  (cost=2587.15..2615.95 rows=67 width=171) (actual time=16.145..16.330 rows=884 loops=1)
+                     Hash Cond: (u.user_id = los.user_id)
+                     Buffers: shared hit=647
+                     ->  Seq Scan on ws_user u  (cost=0.00..25.09 rows=809 width=115) (actual time=0.005..0.069 rows=809 loops=1)
+                           Buffers: shared hit=17
+                     ->  Hash  (cost=2586.32..2586.32 rows=67 width=64) (actual time=16.126..16.128 rows=884 loops=1)
+                           Buckets: 1024  Batches: 1  Memory Usage: 65kB
+                           Buffers: shared hit=630
+                           ->  Subquery Scan on los  (cost=2582.15..2586.32 rows=67 width=64) (actual time=15.921..16.041 rows=884 loops=1)
+                                 Buffers: shared hit=630
+                                 ->  HashAggregate  (cost=2582.15..2585.65 rows=67 width=64) (actual time=15.920..15.999 rows=884 loops=1)
+                                       Group Key: s_1.safe_ip_id, s_1.user_id, s_1.ip_address, s_1.added_at
+                                       Filter: ((max(lh_1.logged_at) IS NULL) OR (max(lh_1.logged_at) < (now() - '1 mon'::interval)))
+                                       Batches: 1  Memory Usage: 185kB
+                                       Buffers: shared hit=630
+                                       ->  Hash Left Join  (cost=2281.68..2568.89 rows=884 width=64) (actual time=15.299..15.719 rows=884 loops=1)
+                                             Hash Cond: ((s_1.user_id = lh_1.user_id) AND (s_1.ip_address = lh_1.ip_address))
+                                             Buffers: shared hit=630
+                                             ->  CTE Scan on active_safe s_1  (cost=0.00..17.68 rows=884 width=48) (actual time=0.010..0.242 rows=884 loops=1)
+                                                   Buffers: shared hit=7
+                                             ->  Hash  (cost=1286.47..1286.47 rows=66347 width=27) (actual time=14.672..14.673 rows=66347 loops=1)
+                                                   Buckets: 131072  Batches: 1  Memory Usage: 4847kB
+                                                   Buffers: shared hit=623
+                                                   ->  Seq Scan on ws_login_history lh_1  (cost=0.00..1286.47 rows=66347 width=27) (actual time=0.024..5.107 rows=66347 loops=1)
+                                                         Buffers: shared hit=623
+ Settings: work_mem = '64MB'
+ Planning:
+   Buffers: shared hit=258
+ Planning Time: 1.226 ms
+ Execution Time: 65.076 ms
+(62 rows)
+
